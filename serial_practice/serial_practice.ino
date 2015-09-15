@@ -1,3 +1,5 @@
+char ser;
+
 void setup() {
   // put your setup code here, to run once:
   Serial.begin(9600);
@@ -7,11 +9,11 @@ void setup() {
 void loop() {
   // put your main code here, to run repeatedly:
   if (Serial.available()) {
-    char ser = Serial.read();
-    if (ser == "on"){
+    ser = Serial.read();
+    if (ser == 'i') {
       digitalWrite(13, HIGH);
     }
-    else if (ser == "off"){
+    else if (ser == 'o') {
       digitalWrite(13, LOW);
     }
   }
