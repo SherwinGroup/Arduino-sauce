@@ -23,16 +23,17 @@ ard.baud_rate = 115200
 ard.timeout = 10000
 
 
-for i in range(50):
-    ard.read()
+for i in range(3):
+    ard.write('200')
+    #ard.read()
     print i
-    if i == 1:
+    if i == 0:
         one = ard.read()
         print one
-    elif i == 25:
+    elif i == 1:
         two = ard.read()
         print two
-    elif i == 49:
+    elif i == 2:
         thr = ard.read()
         print thr
 ard.close()
@@ -40,6 +41,10 @@ one = [int(i) for i in one.split(';')[1:-1]]
 two = [int(i) for i in two.split(';')[1:-1]]
 thr = [int(i) for i in thr.split(';')[1:-1]]
 
+#pathname = os.path.join('C:\Users\FELLab\Documents\GitHub\Arduino-sauce', 'one')
+#np.savetxt(os.path.join('C:\Users\FELLab\Documents\GitHub\Arduino-sauce', 'one.txt'), one)#, fmt='%0.1e')
+#np.savetxt(os.path.join('C:\Users\FELLab\Documents\GitHub\Arduino-sauce', 'two.txt'), two)#, fmt='%0.1e')
+#np.savetxt(os.path.join('C:\Users\FELLab\Documents\GitHub\Arduino-sauce', 'three.txt'), thr)#, fmt='%0.1e')
 plt.plot(np.array(range(len(one))), one)
 plt.plot(np.array(range(len(two))), two)
 plt.plot(np.array(range(len(thr))), thr)

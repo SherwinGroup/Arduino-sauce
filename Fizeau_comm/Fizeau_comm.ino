@@ -140,5 +140,5 @@ void loop()
     digitalWrite(TGpin, LOW);
 
   }
-  delay(1);
+  delay(100);
 }
