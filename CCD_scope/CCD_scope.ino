@@ -21,7 +21,7 @@ void setup()
   ADCSRA &= ~PS_128;  
   ADCSRA |= PS_32; // <-- Using PS_32 makes a single ADC conversion take ~30 us
 
-  analogReference(DEFAULT);
+  //analogReference(DEFAULT);
 
   for(int i=0;i< 529;i++)
   {
@@ -54,31 +54,31 @@ void setup()
 void loop() 
 {  
   digitalWrite(TGpin, HIGH);
-  for(int i=0; i<529; i++)
+  for(int i=0; i<525; i++)
   {
     // Read part 1 of bin:
     digitalWrite(IOpin, LOW);
-    delayMicroseconds(50);
+    delayMicroseconds(1);
     digitalWrite(SHOpin, LOW);
-    delayMicroseconds(50);
+    delayMicroseconds(1);
     digitalWrite(SHOpin, HIGH);
-    delayMicroseconds(50);
+    delayMicroseconds(3);
     digitalWrite(ROpin, LOW);
-    delayMicroseconds(50);
+    delayMicroseconds(1);
     digitalWrite(ROpin, HIGH);
-    delayMicroseconds(50);
+    delayMicroseconds(1);
 
     // Read nothing?
     digitalWrite(IOpin, HIGH);
-    delayMicroseconds(50);
+    delayMicroseconds(3);
     digitalWrite(SHOpin, LOW);
-    delayMicroseconds(50);
+    delayMicroseconds(1);
     digitalWrite(SHOpin, HIGH);
-    delayMicroseconds(50);
+    delayMicroseconds(3);
     digitalWrite(ROpin, LOW);
-    delayMicroseconds(50);
+    delayMicroseconds(1);
     digitalWrite(ROpin, HIGH);
-    delayMicroseconds(50);
+    delayMicroseconds(1);
   }
   digitalWrite(TGpin, LOW);
   delay(10);
