@@ -4,11 +4,13 @@
 // Define various ADC prescaler:
 const unsigned char PS_32 = (1 << ADPS2) | (1 << ADPS0);
 const unsigned char PS_128 = (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
-int TGpin = 4;    // <-- Arduino pin delivering the clock pulses to pin 3 (CLK) of the TSL1402R 
+int TGpin = 4; // This pin can be slow
+/* These aren't needed because bitwise hacking   
 int IOpin = 5;
-int SHOpin = 6;     // <-- Arduino pin delivering the SI (serial-input) pulse to pin 2 of the TSL1402R 
+int SHOpin = 6;  
 int ROpin = 7;
-int AOpin = 1;    // <-- Arduino pin connected to pin 4 (analog output 1)of the TSL1402R
+*/
+int AOpin = 1;    // <-- Arduino pin connected to pin 4 (analog output 1) of the CCD
 int IntArray[400]; // <-- the array where the readout of the photodiodes is stored, as integers
 int holder; 
 int incoming = 1; // This is the signal from the computer that the next run should be sent back.  
@@ -27,7 +29,7 @@ void setup()
   ADCSRA |= PS_32; // <-- Using PS_32 makes a single ADC conversion take ~30 us
 
   //analogReference(DEFAULT);
-
+  /*  I don't think this is necessary?
   for(int i=0;i< 529;i++)
   {
     // Read part 1 of bin:
@@ -54,7 +56,12 @@ void setup()
     digitalWrite(ROpin, HIGH);
     delayMicroseconds(50);
   }
+  */
   Serial.begin(115200);
+  Serial.setTimeout(10); // This makes parseInt not wait a full 
+                         // fucking second before proceeding.  
+                         // It can be made shorter, but runs
+                         // the risk of not reading things
 }
 
 void loop() 
@@ -66,35 +73,36 @@ void loop()
   {
     // Read part 1 of bin:
     PORTD &= ~_BV(PD5); //digitalWrite(IOpin, LOW);
-    __asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t"); // This delays by 1 clock cycle per nop
+    __asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t"); 
+              // This delays by 1 clock cycle per nop
     PORTD &= ~_BV(PD6); //digitalWrite(SHOpin, LOW);
-    __asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t"); // This delays by 1 clock cycle per nop
+    delayMicroseconds(1); 
     PORTD |= _BV(PD6); //digitalWrite(SHOpin, HIGH);
-    __asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t");//delayMicroseconds(35);
+    delayMicroseconds(1);
     PORTD &= ~_BV(PD7); //digitalWrite(ROpin, LOW);
-    __asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t");//delayMicroseconds(1);
+    __asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t");
     PORTD |= _BV(PD7); //digitalWrite(ROpin, HIGH);
-    //delayMicroseconds(1);
-
-    // Read nothing?
+    delayMicroseconds(1);
     PORTD |= _BV(PD5); //digitalWrite(IOpin, HIGH);
     __asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t"); //delayMicroseconds(4);
     PORTD &= ~_BV(PD6); //digitalWrite(SHOpin, LOW);
-    __asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t"); //delayMicroseconds(1);
+    delayMicroseconds(1);
     PORTD |= _BV(PD6); //digitalWrite(SHOpin, HIGH);
-    __asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t");;
+    delayMicroseconds(1);
     PORTD &= ~_BV(PD7); //digitalWrite(ROpin, LOW);
     __asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t");//delayMicroseconds(1);
     PORTD |= _BV(PD7); //digitalWrite(ROpin, HIGH);
     //delayMicroseconds(1);
   }
   digitalWrite(TGpin, LOW);
-  //delay(1); We want the delay to happen after everything so that the incoming data can set integration time
+  //delay(1); We want the delay to happen after everything so that 
+           // the incoming data can set integration time
 
   if (Serial.available() > 0)
   {
-    incoming = Serial.read();
-    delay(incoming); // The integration time for the current data run
+    incoming = Serial.parseInt(); // setTimeout made the minimum
+                                  // integration time 10 ms.
+    delay(incoming); // The integration time for the current run in ms.
 
     digitalWrite(TGpin, HIGH);
     delayMicroseconds(2);
@@ -102,7 +110,7 @@ void loop()
     {
       // Read part 1 of bin:
       PORTD &= ~_BV(PD5); //digitalWrite(IOpin, LOW);
-      __asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t"); // This delays by 1 clock cycle per nop
+      __asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t"); 
       PORTD &= ~_BV(PD6); //digitalWrite(SHOpin, LOW);
       __asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t"); 
       PORTD |= _BV(PD6); //digitalWrite(SHOpin, HIGH);
@@ -135,10 +143,11 @@ void loop()
     {
       Serial.print(IntArray[i]); Serial.print(";");
     }
-    Serial.println(""); // <-- Send a linebreak to indicate the measurement is transmitted.
+    Serial.println(""); // Send a linebreak to indicate 
+                        // the measurement is transmitted.
     
     digitalWrite(TGpin, LOW);
 
   }
-  delay(100);
+  delay(1); // Is this necessary?
 }
