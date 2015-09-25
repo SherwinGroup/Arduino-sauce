@@ -58,7 +58,7 @@ void setup()
   }
   */
   Serial.begin(115200);
-  Serial.setTimeout(10); // This makes parseInt not wait a full 
+  //Serial.setTimeout(10); // This makes parseInt not wait a full 
                          // fucking second before proceeding.  
                          // It can be made shorter, but runs
                          // the risk of not reading things
@@ -102,6 +102,13 @@ void loop()
   {
     incoming = Serial.parseInt(); // setTimeout made the minimum
                                   // integration time 10 ms.
+    // if you pass an ending character so parseInt()
+    // returns faster, read the line, so it won't be
+    // left in the buffer for the next loop() cycle
+    // to catch and act erratically. 
+    if (Serial.available()>0){
+      Serial.read();
+    }
     delay(incoming); // The integration time for the current run in ms.
 
     digitalWrite(TGpin, HIGH);
