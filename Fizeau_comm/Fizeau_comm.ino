@@ -109,6 +109,8 @@ void loop()
     if (Serial.available()>0){
       Serial.read();
     }
+    Serial.print('d');
+    Serial.println(incoming);
     delay(incoming); // The integration time for the current run in ms.
 
     digitalWrite(TGpin, HIGH);
