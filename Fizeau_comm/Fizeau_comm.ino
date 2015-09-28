@@ -4,14 +4,14 @@
 // Define various ADC prescaler:
 const unsigned char PS_32 = (1 << ADPS2) | (1 << ADPS0);
 const unsigned char PS_128 = (1 << ADPS2) | (1 << ADPS1) | (1 << ADPS0);
-int TGpin = 4; // This pin can be slow
+int TGpin = 23; // This pin can be slow
 /* These aren't needed because bitwise hacking   
 int IOpin = 5;
 int SHOpin = 6;  
 int ROpin = 7;
 */
 int AOpin = 1;    // <-- Arduino pin connected to pin 4 (analog output 1) of the CCD
-int IntArray[400]; // <-- the array where the readout of the photodiodes is stored, as integers
+int IntArray[1058]; // <-- the array where the readout of the photodiodes is stored, as integers
 int holder; 
 int incoming = 1; // This is the signal from the computer that the next run should be sent back.  
                   // It sets the integration time.
@@ -20,9 +20,9 @@ void setup()
 {
   // Initialize two Arduino pins as digital output:
   pinMode(TGpin, OUTPUT); 
-  pinMode(5, OUTPUT); // This is the IO clock
+  pinMode(53, OUTPUT); // This is the IO clock
   pinMode(6, OUTPUT); // This is the SHO clock
-  pinMode(7, OUTPUT); // This is the RO clock
+  pinMode(9, OUTPUT); // This is the RO clock
   // To set up the ADC, first remove bits set by Arduino library, then choose 
   // a prescaler: PS_16, PS_32, PS_64 or PS_128:
   ADCSRA &= ~PS_128;  
@@ -69,29 +69,29 @@ void loop()
   // This part of the loop keeps cleaning the CCD
   digitalWrite(TGpin, HIGH);
   delayMicroseconds(2);
-  for(int i=0; i<525; i++)
+  for(int i=0; i<529; i++)
   {
     // Read part 1 of bin:
-    PORTD &= ~_BV(PD5); //digitalWrite(IOpin, LOW);
+    PORTB &= ~_BV(PB0); //digitalWrite(IOpin, LOW);
     __asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t"); 
               // This delays by 1 clock cycle per nop
-    PORTD &= ~_BV(PD6); //digitalWrite(SHOpin, LOW);
+    PORTH &= ~_BV(PH3); //digitalWrite(SHOpin, LOW);
     delayMicroseconds(1); 
-    PORTD |= _BV(PD6); //digitalWrite(SHOpin, HIGH);
+    PORTH |= _BV(PH3); //digitalWrite(SHOpin, HIGH);
     delayMicroseconds(1);
-    PORTD &= ~_BV(PD7); //digitalWrite(ROpin, LOW);
+    PORTH &= ~_BV(PH6); //digitalWrite(ROpin, LOW);
     __asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t");
-    PORTD |= _BV(PD7); //digitalWrite(ROpin, HIGH);
+    PORTH |= _BV(PH6); //digitalWrite(ROpin, HIGH);
     delayMicroseconds(1);
-    PORTD |= _BV(PD5); //digitalWrite(IOpin, HIGH);
+    PORTB |= _BV(PB0); //digitalWrite(IOpin, HIGH);
     __asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t"); //delayMicroseconds(4);
-    PORTD &= ~_BV(PD6); //digitalWrite(SHOpin, LOW);
+    PORTH &= ~_BV(PH3); //digitalWrite(SHOpin, LOW);
     delayMicroseconds(1);
-    PORTD |= _BV(PD6); //digitalWrite(SHOpin, HIGH);
+    PORTH |= _BV(PH3); //digitalWrite(SHOpin, HIGH);
     delayMicroseconds(1);
-    PORTD &= ~_BV(PD7); //digitalWrite(ROpin, LOW);
+    PORTH &= ~_BV(PH6); //digitalWrite(ROpin, LOW);
     __asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t");//delayMicroseconds(1);
-    PORTD |= _BV(PD7); //digitalWrite(ROpin, HIGH);
+    PORTH |= _BV(PH6); //digitalWrite(ROpin, HIGH);
     //delayMicroseconds(1);
   }
   digitalWrite(TGpin, LOW);
@@ -115,40 +115,40 @@ void loop()
 
     digitalWrite(TGpin, HIGH);
     delayMicroseconds(2);
-    for(int i=0; i<525; i++)
+    for(int i=0; i<529; i++)
     {
       // Read part 1 of bin:
-      PORTD &= ~_BV(PD5); //digitalWrite(IOpin, LOW);
+      PORTB &= ~_BV(PB0); //digitalWrite(IOpin, LOW);
       __asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t"); 
-      PORTD &= ~_BV(PD6); //digitalWrite(SHOpin, LOW);
+      PORTH &= ~_BV(PH3); //digitalWrite(SHOpin, LOW);
       __asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t"); 
-      PORTD |= _BV(PD6); //digitalWrite(SHOpin, HIGH);
+      PORTH |= _BV(PH3); //digitalWrite(SHOpin, HIGH);
       holder = analogRead(AOpin);
-      PORTD &= ~_BV(PD7); //digitalWrite(ROpin, LOW);
+      PORTH &= ~_BV(PH6); //digitalWrite(ROpin, LOW);
       __asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t");
-      PORTD |= _BV(PD7); //digitalWrite(ROpin, HIGH);
+      PORTH |= _BV(PH6); //digitalWrite(ROpin, HIGH);
 
-      if (i < 400)
+      if (i < 1058)
       {
         IntArray[i] = holder;
       }
       // Read nothing?
-      PORTD |= _BV(PD5); //digitalWrite(IOpin, HIGH);
+      PORTB |= _BV(PB5); //digitalWrite(IOpin, HIGH);
       __asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t"); 
-      PORTD &= ~_BV(PD6); //digitalWrite(SHOpin, LOW);
+      PORTH &= ~_BV(PH3); //digitalWrite(SHOpin, LOW);
       __asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t"); 
-      PORTD |= _BV(PD6); //digitalWrite(SHOpin, HIGH);
+      PORTH |= _BV(PH3); //digitalWrite(SHOpin, HIGH);
       holder = analogRead(AOpin);
-      PORTD &= ~_BV(PD7); //digitalWrite(ROpin, LOW);
+      PORTH &= ~_BV(PH6); //digitalWrite(ROpin, LOW);
       __asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t");
-      PORTD |= _BV(PD7); //digitalWrite(ROpin, HIGH);
+      PORTH |= _BV(PH6); //digitalWrite(ROpin, HIGH);
 
-      if (i < 399)
+      if (i < 1057)
       {
         IntArray[i+1] = holder;
       }
     }
-    for(int i = 0; i < 400; i++)
+    for(int i = 0; i < 1058; i++)
     {
       Serial.print(IntArray[i]); Serial.print(";");
     }
