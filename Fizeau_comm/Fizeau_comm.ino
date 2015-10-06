@@ -10,6 +10,9 @@ int IOpin = 5;
 int SHOpin = 6;  
 int ROpin = 7;
 */
+int offsetPin = 12; // Arduino pin that sets bias with PWM
+int PWMlevel = 210;
+int pixels = 529;
 int AOpin = 1;    // <-- Arduino pin connected to pin 4 (analog output 1) of the CCD
 int IntArray[1058]; // <-- the array where the readout of the photodiodes is stored, as integers
 int holder; 
@@ -19,15 +22,17 @@ int incoming = 1; // This is the signal from the computer that the next run shou
 void setup() 
 {
   // Initialize two Arduino pins as digital output:
+  pinMode(offsetPin, OUTPUT);
   pinMode(TGpin, OUTPUT); 
   pinMode(53, OUTPUT); // This is the IO clock
   pinMode(6, OUTPUT); // This is the SHO clock
   pinMode(9, OUTPUT); // This is the RO clock
   // To set up the ADC, first remove bits set by Arduino library, then choose 
   // a prescaler: PS_16, PS_32, PS_64 or PS_128:
-  ADCSRA &= ~PS_128;  
-  ADCSRA |= PS_32; // <-- Using PS_32 makes a single ADC conversion take ~30 us
+  //ADCSRA &= ~PS_128;  
+  //ADCSRA |= PS_32; // <-- Using PS_32 makes a single ADC conversion take ~30 us
 
+  analogWrite(offsetPin, PWMlevel);
   //analogReference(DEFAULT);
   /*  I don't think this is necessary?
   for(int i=0;i< 529;i++)
@@ -69,7 +74,7 @@ void loop()
   // This part of the loop keeps cleaning the CCD
   digitalWrite(TGpin, HIGH);
   delayMicroseconds(2);
-  for(int i=0; i<529; i++)
+  for(int i=0; i<pixels; i++)
   {
     // Read part 1 of bin:
     PORTB &= ~_BV(PB0); //digitalWrite(IOpin, LOW);
@@ -82,6 +87,7 @@ void loop()
     PORTH &= ~_BV(PH6); //digitalWrite(ROpin, LOW);
     __asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t");
     PORTH |= _BV(PH6); //digitalWrite(ROpin, HIGH);
+    
     delayMicroseconds(1);
     PORTB |= _BV(PB0); //digitalWrite(IOpin, HIGH);
     __asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t"); //delayMicroseconds(4);
@@ -115,7 +121,7 @@ void loop()
 
     digitalWrite(TGpin, HIGH);
     delayMicroseconds(2);
-    for(int i=0; i<529; i++)
+    for(int i=0; i<pixels; i++)
     {
       // Read part 1 of bin:
       PORTB &= ~_BV(PB0); //digitalWrite(IOpin, LOW);
@@ -127,13 +133,13 @@ void loop()
       PORTH &= ~_BV(PH6); //digitalWrite(ROpin, LOW);
       __asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t");
       PORTH |= _BV(PH6); //digitalWrite(ROpin, HIGH);
-
-      if (i < 1058)
+      //Serial.print(", ");
+      if (i < pixels)
       {
-        IntArray[i] = holder;
+        IntArray[2*i] = holder;
       }
       // Read nothing?
-      PORTB |= _BV(PB5); //digitalWrite(IOpin, HIGH);
+      PORTB |= _BV(PB0); //digitalWrite(IOpin, HIGH);
       __asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t"); 
       PORTH &= ~_BV(PH3); //digitalWrite(SHOpin, LOW);
       __asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t"); 
@@ -143,12 +149,12 @@ void loop()
       __asm__("nop\n\t""nop\n\t""nop\n\t""nop\n\t");
       PORTH |= _BV(PH6); //digitalWrite(ROpin, HIGH);
 
-      if (i < 1057)
+      if (i < (pixels - 1))
       {
-        IntArray[i+1] = holder;
+        IntArray[(2*i+1)] = holder;
       }
     }
-    for(int i = 0; i < 1058; i++)
+    for(int i = 1; i < (2*pixels-1); i++)
     {
       Serial.print(IntArray[i]); Serial.print(";");
     }
