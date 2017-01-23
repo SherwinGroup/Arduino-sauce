@@ -11,7 +11,7 @@ int SHOpin = 6;
 int ROpin = 7;
 */
 int offsetPin = 12; // Arduino pin that sets bias with PWM
-int PWMlevel = 210;
+int PWMlevel = 202; //204
 int pixels = 529;
 int AOpin = 1;    // <-- Arduino pin connected to pin 4 (analog output 1) of the CCD
 int IntArray[1058]; // <-- the array where the readout of the photodiodes is stored, as integers
