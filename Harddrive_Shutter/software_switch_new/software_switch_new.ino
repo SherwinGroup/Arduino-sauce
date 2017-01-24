@@ -1,21 +1,67 @@
-int steps = 30;
-int delaylength = 300;
+// Pin numbers for speed on motor shield
 int pwma = 3;
 int pwmb = 11;
+// Pin numbers for brakes on motor shield
 int brakea = 9;
 int brakeb = 8;
-int dira = 6;
+// Pins to specify direction on motor shield
+int dira = 12;
 int dirb = 13;
-int loopnum = 1000;
-int i = 0;
+// Pin to read state of the shutter Switch
+int switchPin = 2;
+// Pin to read the level of the trigger
+int triggerIn = 5;
+int triggerOut = 6;
+
+// Bool to monitor whether to accept 
+// open requests from the Switch 
+bool triggerFromSwitch = false;
+// Duration to keep shutter open after recieving a trigger pulse
+int shutterOpenTime = 100;
+
+// string for reading in the serial buffer
+String serialBuffer;
+
+// variables for reading in the Switch/trigger levels
+int currentSwitchState  = 1;
+int currentTriggerState = 0;
+// memory for knowing what the previous state was. 
+int prevSwitchState  = 1;
+int prevTriggerState = 0;
+
+
+// control the "speed" of the shutter?
+int motorPWMHoldLevel = 255;
+int motorPWMMoveLevel = 255;
+// time to delay before switching the move current to the hold current
+int motorMoveTime = 1;
+
+void toggleShutter(int todo=HIGH) {
+//  digitalWrite(brakea, LOW);
+  analogWrite(pwma, motorPWMMoveLevel);
+  digitalWrite(dira, todo);
+  delay(motorMoveTime);
+  analogWrite(pwma, motorPWMHoldLevel);
+//  digitalWrite(brakea, HIGH);
+}
+
+void openShutter() {
+  toggleShutter(HIGH);
+}
+
+void closeShutter() {
+  toggleShutter(LOW);
+}
 
 void setup() {
-  // put your setup code here, to run once:
-  pinMode(12, OUTPUT);
-  pinMode(10, OUTPUT); //不写这句,或写pin10为input,LED都不会亮
-  pinMode(5, INPUT);
+  // These pins were used for controlling the R/G LEDs on the protoshield
+//  pinMode(12, OUTPUT);
+//  pinMode(10, OUTPUT); 
+  pinMode(triggerIn, INPUT);
+  pinMode(triggerOut, OUTPUT);
   Serial.begin(9600);
-  //
+  
+  // Set pin modes on all of the 
   pinMode(dira, OUTPUT);
   pinMode(dirb, OUTPUT);
   pinMode(pwma, OUTPUT);
@@ -27,119 +73,144 @@ void setup() {
   digitalWrite(brakeb, LOW);
 
 }
-int myButton = 2;
-int origin = 1;
-int Origin = 0;
-int count, Count = 0;
-char sw;
-// Bool to monitor whether to accept 
-// open requests from the button 
-bool triggerFromButton = false;
-int shutterOpenTime = 10;
-int Time = 0;
 
-String W, w, S;
-int j = 0;
-int q = 5;
-//int i=0;
-//bool i=false;
-int memory = LOW;
-//bool TS;
+
 void loop() {
-  Serial.println("looped");
-  // check if we're being controlled by the comptuer
+  // check if we're being sent commands by the computer
+  /*
+   * Either "delay<#>", where <#> is an int in ms for how long the shutter should stay open
+   * "1" to enable the Switch press to open the shutter (and disable external triggering)
+   * "0" to to do the opposite.
+   */
   if (Serial.available() > 0) {
+    // Read in whatever was sent
+    serialBuffer = Serial.readString();
     
-    S = Serial.readString();
-    Serial.println("Read string in: " + S);
+//    Serial.println("Read string in: " + serialBuffer);
 
-    // check if it's done with delay# or toggling
-    // source.
-    if (S.charAt(0) != 'd') {
+    // Assume you're enabling/disabling the Switch if youdon't start with 'd'.
+    // Should be noted that anything besides '0' will be intepretted as '1'. 
+    if (serialBuffer.charAt(0) == 'd') {
+      // Note: really works for anything dxxxx where x is any character.
+      // leaving it how the undergrads first programmed it.
+      shutterOpenTime = serialBuffer.substring(5).toInt();
+      Serial.println("Setting shutter open time to " + String(shutterOpenTime)); 
+    // debugger to let me set the analog output of the motor
+    }
+    else if (serialBuffer.substring(0,2) == "ph")
+    {
+      
+      motorPWMHoldLevel = serialBuffer.substring(2).toInt();
+      Serial.println("Setting motor hold PWM to " + String(motorPWMHoldLevel));
+    }
+    else if (serialBuffer.substring(0,2) == "pm")
+    {
+      
+      motorPWMMoveLevel = serialBuffer.substring(2).toInt();
+      Serial.println("Setting motor move PWM to " + String(motorPWMMoveLevel));
+    }
+    else if (serialBuffer.substring(0,2) == "td")
+    {
+      
+      motorMoveTime = serialBuffer.substring(2).toInt();
+      Serial.println("Setting motor delay to " + String(motorMoveTime));
+    }
+    else
+    {
       delay(10);
-      triggerFromButton = bool(int(S.charAt(0))-48);
-      Serial.println("Trigger from button set to: " + String(triggerFromButton));
-      delay(10);      
-    // parse if it's setting the delay. 
-    } else {
-      shutterOpenTime = S.substring(5).toInt();
-      Serial.println("Setting shutter open time to " + String(shutterOpenTime));
+      // Want to cast the response to a bool. chr(48)=='0', 
+      // so the subtraction helps convert the string/char '0' to the int 0.
+      triggerFromSwitch = bool(int(serialBuffer.charAt(0))-48);
+      Serial.println("Trigger from Switch set to: " + String(triggerFromSwitch));
+      delay(10);     
     }
   }
 
-  // Read the state of the button
+  // Read the state of the Switch
   //   High = unpressed
   //   Low  =   pressed
-  int ButtonState = digitalRead(2);
+  currentSwitchState = digitalRead(switchPin);
+  currentTriggerState = digitalRead(triggerIn);
 
-  int TriggerState = digitalRead(5);
+  // handle passing along the trigger level
+  // the simple/naive/stupid way:
+  // Unnecessarily writing to the pin every loop, even if it isn't changing
+  // Can have issues that the trigger will stay high longer than the actual trigger
+  //   if the delay time is longer than the trigger pulse
+  digitalWrite(triggerOut, currentTriggerState);
+  
+  
 
-  //keep=ButtonState;
-  if (triggerFromButton) {
-    if (ButtonState == 0 & origin != ButtonState) {
-      count = count + 1;
+  // Handle if you want to open the shutter depending on
+  // Switch state
+  if (triggerFromSwitch) {
+    // detect if it's different from the last loop
+    if (prevSwitchState != currentSwitchState) {
+      // Update the shutter to open/close as necessary
+      if (currentSwitchState) {
+        openShutter();
+      }
+      else {
+        closeShutter();
+      }
     }
-    origin = ButtonState;
-    if (count % 2 == 0) {
-      digitalWrite(12, HIGH);
-      digitalWrite(10, LOW);
-      digitalWrite(dira, HIGH);
-      digitalWrite(pwma, HIGH);
-      //delay(delaylength);
-      digitalWrite(dirb, LOW);
-      digitalWrite(pwmb, HIGH);
-      //delay(delaylength);
-    }
-
-    if (count % 2 == 1) {
-      digitalWrite(12, LOW);
-      digitalWrite(10, HIGH);
-      digitalWrite(dira, LOW);
-      digitalWrite(pwma, HIGH);
-      //delay(delaylength);
-      digitalWrite(dirb, HIGH);
-      digitalWrite(pwmb, HIGH);
-      //delay(delaylength);
-    }
-    Serial.println("Button State:" + String(ButtonState));
-    delay(100);
-  } else {
+//    Serial.println("Switch State:" + String(currentSwitchState));
+//    delay(100);
     
-    //      Time=w.toInt(); 
-    //      Serial.print(w.toInt());
-    //      Serial.println('~');
-    if (TriggerState == HIGH & shutterOpenTime >= 0 & TriggerState != memory) { //因为值为1时要执行更多的指令所以serial monitor上显示的会慢一点
-      //Count=Count+1;
-      digitalWrite(12, LOW);
-      digitalWrite(10, HIGH);
-      digitalWrite(dira, HIGH);
-      digitalWrite(pwma, HIGH);
-      digitalWrite(dirb, LOW);
-      digitalWrite(pwmb, HIGH);
-      delay(shutterOpenTime);
-      /*
-      digitalWrite(12,HIGH); 
-      digitalWrite(10,LOW);
-      digitalWrite(dira, HIGH);
-      digitalWrite(pwma, HIGH);
-      digitalWrite(dirb, LOW);
-      digitalWrite(pwmb, HIGH);
-      */
-    } else {
-      digitalWrite(12, HIGH);
-      digitalWrite(10, LOW);
-      digitalWrite(dira, LOW);
-      digitalWrite(pwma, HIGH);
-      //delay(delaylength);
-      digitalWrite(dirb, HIGH);
-      digitalWrite(pwmb, HIGH);
-    }
-    memory = TriggerState;
-    //j=0;
-    //Origin=TriggerState; 
-    Serial.println("Trigger State:" + TriggerState);
-    delay(10);
   }
-  delay(500);
-  Serial.flush();
+  // If not triggering from the Switch, we're being driven by an external trigger
+  else {
+    if (currentTriggerState == HIGH & shutterOpenTime >= 0 & currentTriggerState != prevTriggerState) {
+      openShutter();
+      delay(shutterOpenTime);
+      closeShutter();
+    }
+    else {
+    }
+//    Serial.println("Trigger State:" + currentTriggerState);
+//    delay(10);
+  }
+  prevTriggerState = currentTriggerState;
+  prevSwitchState = currentSwitchState;
+//  delay(500);
+//  Serial.flush();
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
