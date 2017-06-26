@@ -17,7 +17,7 @@ int triggerOut = 6;
 // open requests from the Switch 
 bool triggerFromSwitch = false;
 // Duration to keep shutter open after recieving a trigger pulse
-int shutterOpenTime = 100;
+int shutterOpenTime = 20;
 
 // string for reading in the serial buffer
 String serialBuffer;
@@ -34,14 +34,14 @@ int prevTriggerState = 0;
 int motorPWMHoldLevel = 255;
 int motorPWMMoveLevel = 255;
 // time to delay before switching the move current to the hold current
-int motorMoveTime = 1;
+int motorMoveTime = 0;
 
 void toggleShutter(int todo=HIGH) {
 //  digitalWrite(brakea, LOW);
   analogWrite(pwma, motorPWMMoveLevel);
   digitalWrite(dira, todo);
-  delay(motorMoveTime);
-  analogWrite(pwma, motorPWMHoldLevel);
+//  delay(motorMoveTime);
+//  analogWrite(pwma, motorPWMHoldLevel);
 //  digitalWrite(brakea, HIGH);
 }
 
@@ -138,9 +138,29 @@ void loop() {
   // Can have issues that the trigger will stay high longer than the actual trigger
   //   if the delay time is longer than the trigger pulse
   digitalWrite(triggerOut, currentTriggerState);
+  // Right now, I want this to function like the other commercial shutter.
+  // That is, the switch on the front should act like a NO/NC switch, and
+  // the trigger toggles it. With having the computer control how to
+  // open it, it was getting annoying to align. I'll need to think about
+  // the cleanest way to add in computer control...
   
-  
-
+      // detect if it's different from the last loop
+  if (prevSwitchState != currentSwitchState) {
+    // Update the shutter to open/close as necessary
+    if (currentSwitchState) {
+      openShutter();
+    }
+    else {
+      closeShutter();
+    }
+  } 
+  // If not triggering from the Switch, we're being driven by an external trigger
+  if (currentTriggerState == HIGH & shutterOpenTime >= 0 & currentTriggerState != prevTriggerState) {
+    toggleShutter(!digitalRead(dira));
+    delay(shutterOpenTime);
+    toggleShutter(!digitalRead(dira));
+    }
+  /*
   // Handle if you want to open the shutter depending on
   // Switch state
   if (triggerFromSwitch) {
@@ -170,6 +190,9 @@ void loop() {
 //    Serial.println("Trigger State:" + currentTriggerState);
 //    delay(10);
   }
+  */
+
+  
   prevTriggerState = currentTriggerState;
   prevSwitchState = currentSwitchState;
 //  delay(500);
