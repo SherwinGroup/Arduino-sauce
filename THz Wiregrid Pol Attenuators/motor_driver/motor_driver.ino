@@ -23,7 +23,7 @@ bool isMoving = false; //should we keep turning the motor?
 bool previousDir = true; //previous and current Dir handle correction of changing directions
 bool currentDir = true; // true is clockwise false is counterclockwise
 int stepAddress = 0; //EEPROM address int for logging currentStep
-int rotAddress = 1; //EEPROM address int for logging isClockwise
+int rotAddress = sizeof(int); //EEPROM address int for logging isClockwise. Needs to be offset by the size of the previous data
 //int correctionStep = 23; //correction step counter for switching rotation directions
 //int currentCorrectionStep = 0;
 String serialBuffer;
@@ -34,9 +34,10 @@ void setup()
     Serial.setTimeout(5);
 
     //gets the current step from previous use
-    float f = 0.00f;
-    EEPROM.get(stepAddress, f);
-    currentStep = (int)f;
+//    float f = 0.00f;
+//    EEPROM.get(stepAddress, f);
+//    currentStep = (int)f;
+    EEPROM.get(stepAddress, currentStep);
     previousStep = currentStep;
 
     //gets currentDir from previous use
@@ -107,16 +108,16 @@ void loop()
             //either sets the EEPROM to currentStep and currentDir: "e"
             //or sets EEPROM to zero: "ec"
 
-            float f = (float)currentStep;
-            bool b = currentDir;
+//            float f = (float)currentStep;
+//            bool b = currentDir;
             if (serialBuffer.substring(1, 2) == "c") {
-                EEPROM.put(stepAddress, 0.00f);
+                EEPROM.put(stepAddress, 0);
                 currentStep = 0;
                 previousStep = 0;
             }
             else {
-                EEPROM.put(stepAddress, f);
-                EEPROM.put(rotAddress, b);
+                EEPROM.put(stepAddress, currentStep);
+                EEPROM.put(rotAddress, currentDir);
             }
         }
 
@@ -129,9 +130,14 @@ void loop()
             myStepper.step(-1 * toMove);
             steps += toMove;
             currentStep -= toMove;
+            // Always store the position after moving
+            EEPROM.put(stepAddress, currentStep);
         }
         else {
             isMoving = false;
+            // save the direction after finishing a move. Should probably be
+            // done at the start, though.
+            EEPROM.put(rotAddress, currentDir);
         }
 
         //  if (currentDir != previousDir){ possible backlash correction
